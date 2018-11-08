@@ -13,9 +13,8 @@ def read(fp):
     return r
 
 
-def draw_miss_rate(datapath,savepath):
-    name = ["bwaves", "gamess", "gromacs", "hmmer", "leslie3d", "mcf", "sjeng", "astar", "bzip2", "calculix", "gobmk",
-            "h264ref", "lbm", "libquantum", "milc", "namd", "soplex", "tonto", "zeusmp", "omnetpp", "GemsFDTD"]
+def draw_miss_rate(classify,datapath,savepath):
+    name = classify.keys()
     for i in name:
         file = datapath + "/" + i + "/miss_rate"
         x = np.arange(1, 12)
@@ -78,7 +77,7 @@ def classify_app(miss_rate,pth,ps,cth):
         for p in cy:
             if p<0:
                 return "SS"
-        for c in range(cth+1,11):
+        for c in range(cth+1,10):
             if cy[c]<=ps:
                 return "SF"
         return "SS"
@@ -86,25 +85,68 @@ def classify_app(miss_rate,pth,ps,cth):
         for p in cy:
             if p<0:
                 return "IS"
-        for c in range(cth+1,11):
+        for c in range(cth+1,10):
             if cy[c]<=ps:
                 return "IF"
         return "IS"
 
 
+def cal_acc(pred,real):
+    size=len(pred)
+    if size!=len(real):
+        print("Dict size not equal!")
+        exit(1)
 
-def do_classify(pth,ps,cth):
-    dir = "/Users/lianghong/Downloads/gem5_result"
-    name = ["bwaves", "gamess", "gromacs", "hmmer", "leslie3d", "mcf", "sjeng", "astar", "bzip2", "calculix", "gobmk",
-            "h264ref", "lbm", "libquantum", "milc", "namd", "soplex", "tonto", "zeusmp", "omnetpp", "GemsFDTD"]
-    for i in name:
-        file = dir + "/" + i + "/miss_rate"
-        miss_rate = read(file)
-        t=classify_app(miss_rate,pth,ps,cth)
-        print("%s : %s" %(i,t))
+    acc_count=0
+    for i in pred.keys():
+        if pred[i]==real[i]:
+            acc_count+=1
+    return acc_count/size
+
+
+def find_best_para(miss_data,real):
+    """
+    pth_x=[0,1]
+    ps_x=[0,1]
+    cth=[6,11]
+
+    """
+    best_pth,best_ps=0,0
+    best_acc=0
+
+    i=0
+    while i<1:
+        j=0
+        while j<1:
+             pred=do_classify(miss_data,real_class,i,j,8)
+             acc=cal_acc(pred,real)
+             if acc>best_acc:
+                 best_acc=acc
+                 best_pth,best_ps=i,j
+             j+=0.01
+        i+=0.01
+
+    print("Best accuarcy is %f" %(best_acc))
+    print("pth=%f,ps=%f" % (best_pth,best_ps))
+
+
+def do_classify(miss_data,real_class,pth,ps,cth):
+    clz=dict()
+    for i in real_class.keys():
+        t=classify_app(miss_data[i],pth,ps,cth)
+        clz[i]=t
+
+    return clz
 
 
 if __name__=="__main__":
-    data_path="/Users/lianghong/Downloads/gem5_result"
-    # draw_miss_rate(data_path,data_path)
-    do_classify(pth=0.3,ps=0.1,cth=8)
+    data_path="/home/lianghong/Desktop/GraduateData/research3/gem5_result"
+    real_class = {"bwaves":"IS", "gamess":"SF", "gromacs":"SF", "hmmer":"SF", "leslie3d":"IS", "mcf":"IS", "sjeng":"IS", "astar":"IS", "bzip2":"SF", "calculix":"IS", "gobmk":"IF",
+            "h264ref":"SS", "lbm":"SS", "libquantum":"IS", "milc":"IS", "namd":"SS", "soplex":"SS", "tonto":"SS", "zeusmp":"IS", "omnetpp":"SF", "GemsFDTD":"SS"}
+    # draw_miss_rate(real_class,data_path,data_path)
+    miss_data=dict()
+    for i in real_class.keys():
+        file=data_path+"/"+i+"/miss_rate"
+        miss_data[i]=read(file)
+
+    find_best_para(miss_data,real_class)
