@@ -22,7 +22,7 @@ def draw_miss_rate(classify,datapath,savepath):
         cx = np.arange(1, 11)
         cy = []
         for k in range(10):
-            cy.append((y[k] - y[k + 1]) / (128 * (2 ** (k + 1) - 2 ** k) / 1024))
+            cy.append((y[k] - y[k + 1]) / (128 *  2 ** k / 1024))
         ff = plt.figure()
         pic1 = ff.add_subplot(2, 1, 1)
         pic1.plot(x, y, marker='o', label="Miss Rate")
@@ -62,10 +62,11 @@ def classify_app(miss_rate,pth,ps,cth):
     """
     cy=[]
     for k in range(10):
-        cy.append((miss_rate[k] - miss_rate[k + 1]) / (128 * (2 ** (k + 1) - 2 ** k) / 1024))
+        cy.append((miss_rate[k] - miss_rate[k + 1]) / (128 * 2**k / 1024))
     count,cc=0,0
+    # print(cy)
     for ss in cy:
-        if ss != 0:
+        if ss>0.01:
             count += 1
             cc += ss
     if count!=0:
@@ -75,20 +76,20 @@ def classify_app(miss_rate,pth,ps,cth):
 
     if pg>pth:
         for p in cy:
-            if p<0:
-                return "SS"
-        for c in range(cth+1,10):
-            if cy[c]<=ps:
-                return "SF"
-        return "SS"
+            if p<-0.1:
+                return "SS",pg
+        for c in range(cth,9):
+            if miss_rate[c]<ps:
+                return "SF",pg
+        return "SS",pg
     else:
         for p in cy:
-            if p<0:
-                return "IS"
-        for c in range(cth+1,10):
-            if cy[c]<=ps:
-                return "IF"
-        return "IS"
+            if p<-0.1:
+                return "IS",pg
+        for c in range(cth,9):
+            if miss_rate[c]<ps:
+                return "IF",pg
+        return "IS",pg
 
 
 def cal_acc(pred,real):
@@ -104,7 +105,7 @@ def cal_acc(pred,real):
     return acc_count/size
 
 
-def find_best_para(miss_data,real):
+def find_best_para(miss_data,real,cth):
     """
     pth_x=[0,1]
     ps_x=[0,1]
@@ -118,35 +119,40 @@ def find_best_para(miss_data,real):
     while i<1:
         j=0
         while j<1:
-             pred=do_classify(miss_data,real_class,i,j,8)
+             pred=do_classify(miss_data,real_class,i,j,cth)
              acc=cal_acc(pred,real)
+             # print("acc=%f pth=%f ps=%f" %(acc,i,j))
              if acc>best_acc:
                  best_acc=acc
                  best_pth,best_ps=i,j
-             j+=0.01
+             j+=0.001
         i+=0.01
 
     print("Best accuarcy is %f" %(best_acc))
     print("pth=%f,ps=%f" % (best_pth,best_ps))
+    return best_pth,best_ps
 
 
 def do_classify(miss_data,real_class,pth,ps,cth):
     clz=dict()
     for i in real_class.keys():
-        t=classify_app(miss_data[i],pth,ps,cth)
+        t,_=classify_app(miss_data[i],pth,ps,cth)
         clz[i]=t
 
     return clz
 
 
 if __name__=="__main__":
-    data_path="/home/lianghong/Desktop/GraduateData/research3/gem5_result"
-    real_class = {"bwaves":"IS", "gamess":"SF", "gromacs":"SF", "hmmer":"SF", "leslie3d":"IS", "mcf":"IS", "sjeng":"IS", "astar":"IS", "bzip2":"SF", "calculix":"IS", "gobmk":"IF",
-            "h264ref":"SS", "lbm":"SS", "libquantum":"IS", "milc":"IS", "namd":"SS", "soplex":"SS", "tonto":"SS", "zeusmp":"IS", "omnetpp":"SF", "GemsFDTD":"SS"}
+    data_path="/Users/lianghong/Downloads/gem5_result"
+    real_class = {"bwaves":"IS", "gamess":"SF", "gromacs":"SF", "hmmer":"SF", "leslie3d":"IS", "mcf":"SF", "sjeng":"IS", "astar":"IS", "bzip2":"SF", "calculix":"SS", "gobmk":"IF",
+            "h264ref":"SF", "lbm":"IS", "libquantum":"IS", "milc":"IS", "namd":"IS", "soplex":"SS", "tonto":"IS", "zeusmp":"IS", "omnetpp":"SF", "GemsFDTD":"SS"}
     # draw_miss_rate(real_class,data_path,data_path)
     miss_data=dict()
     for i in real_class.keys():
         file=data_path+"/"+i+"/miss_rate"
         miss_data[i]=read(file)
-
-    find_best_para(miss_data,real_class)
+    pth,ps=find_best_para(miss_data,real_class,cth=6)
+    print()
+    for i in real_class.keys():
+        cls,pg=classify_app(miss_data[i],pth,ps,cth=6)
+        print("%s %s %s %.4f" % (i,real_class[i],cls,pg))
