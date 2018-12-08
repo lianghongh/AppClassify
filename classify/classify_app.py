@@ -1,5 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 
 def read(fp):
@@ -114,20 +115,37 @@ def find_best_para(miss_data,real,cth):
     """
     best_pth,best_ps=0,0
     best_acc=0
+    fig=plt.figure()
+    ax3d=Axes3D(fig)
+    x=np.linspace(0,1,100)
+    y=np.linspace(0,1,1000)
+    x,y=np.meshgrid(x,y)
+    z=[]
 
     i=0
     while i<1:
         j=0
+        temp=[]
         while j<1:
              pred=do_classify(miss_data,real_class,i,j,cth)
              acc=cal_acc(pred,real)
-             # print("acc=%f pth=%f ps=%f" %(acc,i,j))
+             temp.append(acc)
              if acc>best_acc:
                  best_acc=acc
                  best_pth,best_ps=i,j
              j+=0.001
+        z.append(temp)
         i+=0.01
 
+    z=np.array(z,dtype=np.float64).T
+    ax3d.plot_surface(x,y,z,rstride=1,cstride=1,cmap=plt.cm.jet)
+    ax3d.set_title("Application Classify")
+    ax3d.set_xlabel("pth")
+    ax3d.set_ylabel("ps")
+    ax3d.set_xticks(np.arange(0,1,0.1))
+    ax3d.set_yticks(np.arange(0,1,0.1))
+    ax3d.set_zlabel("Classify Accuracy Rate")
+    plt.show()
     print("Best accuarcy is %f" %(best_acc))
     print("pth=%f,ps=%f" % (best_pth,best_ps))
     return best_pth,best_ps
