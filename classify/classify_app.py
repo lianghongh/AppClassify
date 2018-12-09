@@ -138,13 +138,14 @@ def find_best_para(miss_data,real,cth):
         i+=0.01
 
     z=np.array(z,dtype=np.float64).T
-    ax3d.plot_surface(x,y,z,rstride=1,cstride=1,cmap=plt.cm.jet)
+    surf=ax3d.plot_surface(x,y,z,rstride=1,cstride=1,cmap=plt.cm.jet)
     ax3d.set_title("Application Classify")
     ax3d.set_xlabel("pth")
     ax3d.set_ylabel("ps")
     ax3d.set_xticks(np.arange(0,1,0.1))
     ax3d.set_yticks(np.arange(0,1,0.1))
     ax3d.set_zlabel("Classify Accuracy Rate")
+    fig.colorbar(surf,shrink=0.5)
     plt.show()
     print("Best accuarcy is %f" %(best_acc))
     print("pth=%f,ps=%f" % (best_pth,best_ps))
